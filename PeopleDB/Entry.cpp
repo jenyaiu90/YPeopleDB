@@ -927,7 +927,7 @@ bool Entry::load(const short &entries, const ushort &Id)
 	}
 	p->next = NULL;
 	delete sheets;
-	sbuff = readFile(Id, "children");
+	sbuff = readFile(Id, "sheets");
 	sheets = new ushortList;
 	p = sheets;
 	sheets->id = 0;
@@ -956,8 +956,9 @@ bool Entry::load(const short &entries, const ushort &Id)
 }
 void Entry::addChild(const ushort &Id)
 {
-	if (children == NULL)
+	if (children == NULL || children->id == 0)
 	{
+		delete children;
 		children = new ushortList;
 		children->id = Id;
 		children->next = NULL;
