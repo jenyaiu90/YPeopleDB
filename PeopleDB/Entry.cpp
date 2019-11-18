@@ -6,7 +6,6 @@
 //  File: Entry.cpp                   //
 //////////////////////////////////////*/
 #include <string>
-#include <fstream>
 #include <iostream>
 #include <direct.h>
 #include <Windows.h>
@@ -82,19 +81,19 @@ Entry::~Entry()
 	delete spointer;*/
 	delete sheets;
 }
-void Entry::set()
+void Entry::set(const short &entries)
 {
 	line("Созданиие");
-	setName();
+	setName(entries);
 	setGender();
 	setBirth();
 	setDeath();
-	setParents();
+	setParents(entries);
 	setSheets();
 	if (father)
 	{
 		Entry tmp(father);
-		tmp.load();
+		tmp.load(entries);
 		generation = tmp.generation + 1;
 	}
 	else
@@ -102,16 +101,22 @@ void Entry::set()
 		if (mather)
 		{
 			Entry tmp(mather);
-			tmp.load();
+			tmp.load(entries);
 			generation = tmp.generation + 1;
 		}
 		else
 		setGeneration();
 	}
 	save();
+	int count;
+	ifstream ifile("files\\dbn.ypdb");
+	ifile >> count;
+	ifile.close();
+	ofstream ofile("files\\dbn.ypdb");
+	ofile << ++count;
 	cout << "Информация сохранена.";
 }
-void Entry::setName()
+void Entry::setName(const short &entries)
 {
 	bool success;
 	do
@@ -129,12 +134,12 @@ void Entry::setName()
 			resetColor();
 			success = false;
 		}
-		if (search(true, false, name, false))
+		if (search(entries, true, false, name, false))
 		{
 			setColor(Yellow, LightRed);
 			cout << "Предупреждение: такое имя уже записано:" << endl << endl;
 			resetColor();
-			search(true, true, name, false);
+			search(entries, true, true, name, false);
 			bool in;
 			cout << endl << "Подтвердить имя? ";
 			cin >> in;
@@ -316,7 +321,7 @@ void Entry::setDeath()
 		death = stoi(buff);
 	}
 }
-void Entry::setParents()
+void Entry::setParents(const short &entries)
 {
 	bool success;
 	cout << endl << "Если родитель неизвестен, введите 0." << endl <<
@@ -344,7 +349,7 @@ void Entry::setParents()
 			{
 				success = false;
 				cout << endl;
-				displayList();
+				displayList(entries);
 				cout << endl;
 				break;
 			}
@@ -355,7 +360,7 @@ void Entry::setParents()
 				getline(cin, buff);
 				getline(cin, buff);
 				cout << endl;
-				search(false, true, buff);
+				search(entries, false, true, buff);
 				cout << endl;
 				success = false;
 				break;
@@ -370,12 +375,13 @@ void Entry::setParents()
 					break;
 				}
 				Entry entry(in);
-				if (!entry.load())
+				if (in > entries)
 				{
 					cout << "Человека с таким ID не существует." << endl;
 					success = false;
 					break;
 				}
+				entry.load(entries);
 				if (entry.getGender() == is_mather)
 				{
 					cout << (is_mather ? "Мать должна быть женского пола." : "Отец должен быть мужского пола.") << endl;
@@ -458,7 +464,7 @@ void Entry::displayYear(const bool &is_death)
 	}
 	resetColor();
 }
-void Entry::displayParents()
+void Entry::displayParents(const short &entries)
 {
 	displayListHeader();
 	if (father == 0)
@@ -484,7 +490,7 @@ void Entry::displayParents()
 	else
 	{
 		Entry entry(father);
-		entry.load();
+		entry.load(entries);
 		entry.displayInList();
 	}
 	if (mather == 0)
@@ -510,7 +516,7 @@ void Entry::displayParents()
 	else
 	{
 		Entry entry(mather);
-		entry.load();
+		entry.load(entries);
 		entry.displayInList();
 	}
 }
@@ -525,7 +531,7 @@ bool Entry::getGender()
 {
 	return gender;
 }
-ushort Entry::display(const bool displayGeneration)
+ushort Entry::display(const short &entries)
 {
 	line("Просмотр");
 	setColor(Yellow, Blue);
@@ -540,13 +546,17 @@ ushort Entry::display(const bool displayGeneration)
 	cout << "Год смерти:   ";
 	displayYear(true);
 	cout << endl << "Родители:" << endl;
-	displayParents();
+	displayParents(entries);
 	cout << endl << endl << "Дети:" << endl;
 	displayListHeader();
 	for (ushortList *pointer = children; pointer != NULL; pointer = pointer->next)
 	{
+		if (pointer->id == 0)
+		{
+			break;
+		}
 		Entry entry(pointer->id);
-		entry.load();
+		entry.load(entries);
 		entry.displayInList();
 	}
 	cout << endl << endl << "Супруги:" << endl;
@@ -556,8 +566,12 @@ ushort Entry::display(const bool displayGeneration)
 	was->next = NULL;
 	for (ushortList *pointer = children; pointer != NULL; pointer = pointer->next)
 	{
+		if (pointer->id == 0)
+		{
+			break;
+		}
 		Entry entry(pointer->id);
-		entry.load();
+		entry.load(entries);
 		ushort buff = entry.getParent(!gender);
 		if (buff != 0)
 		{
@@ -572,7 +586,7 @@ ushort Entry::display(const bool displayGeneration)
 			}
 			if (!check)
 			{
-				entry.load(buff);
+				entry.load(entries, buff);
 				entry.displayInList();
 				ushortList *tmp = new ushortList;
 				tmp->id = buff;
@@ -583,35 +597,32 @@ ushort Entry::display(const bool displayGeneration)
 	}
 	cout << endl << endl << "Листы:";
 	displaySheets();
-	if (displayGeneration)
-	{
-		cout << endl << endl << "Поколение " << generation << ".";
-		cout << endl << endl << "Для выхода введите 0." << endl << "Перейти к ID: ";
-		ushort ret;
-		cin >> ret;
-		return ret;
-	}
+	cout << endl << endl << "Поколение " << generation << ".";
+	cout << endl << endl << "Для выхода введите 0." << endl << "Перейти к ID: ";
+	ushort ret;
+	cin >> ret;
+	return ret;
 	return 0;
 }
-short Entry::displayList(const short page)
+short Entry::displayList(const short &entries, const short page)
 {
 	line("Список записей. Страница ", page + 1);
 	displayListHeader();
 	Entry entry(1);
 	short i;
-	for (i = page * 150 + 1; entry.load(i) && i <= (page + 1) * 150; i++)
+	for (i = page * 150 + 1; i <= entries && i <= (page + 1) * 150; i++)
 	{
-		entry.load(i);
+		entry.load(entries, i);
 		entry.displayInList();
 	}
-	cout << endl << "0 — выход " << endl << (page ? "-2 — предыдущая страница" : "\0") << endl << (entry.load(i) ? "-1 — следующая страница" : "\0") << endl << "Перейти к ID: ";
+	cout << endl << "0 — выход " << endl << (page ? "-2 — предыдущая страница" : "\0") << endl << (i <= entries ? "-1 — следующая страница" : "\0") << endl << "Перейти к ID: ";
 	short ID;
 	cin >> ID;
 	while (ID > 0)
 	{
 		Entry entry(ID);
-		entry.load();
-		ID = entry.display();
+		entry.load(entries);
+		ID = entry.display(entries);
 	}
 	switch (ID)
 	{
@@ -624,14 +635,14 @@ short Entry::displayList(const short page)
 	}
 	return 0;
 }
-void Entry::displaySheetList(const ushort &sheet)
+void Entry::displaySheetList(const short &entries, const ushort &sheet)
 {
 	line("Список записей в листе №" + sheet);
 	displayListHeader();
 	Entry entry(1);
-	for (short i = 1; entry.load(i); i++)
+	for (short i = 1; i <= entries; i++)
 	{
-		entry.load(i);
+		entry.load(entries, i);
 		bool match = false;
 		for (ushortList *pointer = entry.getSheets(); pointer != NULL; pointer = pointer->next)
 		{
@@ -652,8 +663,8 @@ void Entry::displaySheetList(const ushort &sheet)
 	while (ID != 0)
 	{
 		Entry entry(ID);
-		entry.load();
-		ID = entry.display();
+		entry.load(entries);
+		ID = entry.display(entries);
 	}
 }
 void Entry::displayInList()
@@ -764,81 +775,65 @@ void Entry::displayInList()
 }*/
 void Entry::save()
 {
-	_mkdir("files\\");
-	_mkdir(("files\\" + to_string(id)).c_str());
-	ofstream file("files\\" + to_string(id) + "\\name.dat", ios_base::ate);
-	file << name;
-	file.close();
-	file.open("files\\" + to_string(id) + "\\gender.dat", ios_base::ate);
-	file << gender;
-	file.close();
+	writeFile(id, "name", name);
+	writeFile(id, "gender", gender ? "1" : "0");
+	writeFile(id, "birthStatus", to_string(birthStatus));
+	writeFile(id, "deathStatus", to_string(deathStatus));
+	writeFile(id, "father", to_string(father));
+	writeFile(id, "mather", to_string(mather));
+	writeFile(id, "generation", to_string(generation));
 	if (birthStatus != Un)
 	{
-		file.open("files\\" + to_string(id) + "\\birth.dat", ios_base::ate);
-		file << birth;
-		file.close();
+		writeFile(id, "birth", to_string(birth));
 	}
 	if (deathStatus != Un)
 	{
-		file.open("files\\" + to_string(id) + "\\death.dat", ios_base::ate);
-		file << death;
-		file.close();
+		writeFile(id, "death", to_string(death));
 	}
-	file.open("files\\" + to_string(id) + "\\birthStatus.dat", ios_base::ate);
-	file << birthStatus;
-	file.close();
-	file.open("files\\" + to_string(id) + "\\deathStatus.dat", ios_base::ate);
-	file << deathStatus;
-	file.close();
-	file.open("files\\" + to_string(id) + "\\father.dat", ios_base::ate);
-	file << father;
-	file.close();
-	file.open("files\\" + to_string(id) + "\\mather.dat", ios_base::ate);
-	file << mather;
-	file.close();
-	file.open("files\\" + to_string(id) + "\\children.dat", ios_base::ate);
-	for (ushortList *pointer = children; pointer != NULL; pointer = pointer->next)
+	if (children == NULL)
 	{
-		file << pointer->id << endl;
+		writeFile(id, "children", "0");
 	}
-	file.close();
-	file.open("files\\" + to_string(id) + "\\sheets.dat", ios_base::ate);
-	for (ushortList *pointer = sheets; pointer != NULL; pointer = pointer->next)
+	else
 	{
-		file << pointer->id << endl;
+		ushortList *p;
+		string buff = to_string(children->id);
+		for (p = children->next; p != NULL; p = p->next)
+		{
+			buff += "," + to_string(p->id);
+		}
+		writeFile(id, "children", buff);
 	}
-	file.close();
-	file.open("files\\" + to_string(id) + "\\generation.dat", ios_base::ate);
-	file << generation;
-	file.close();
+
+	if (sheets == NULL)
+	{
+		writeFile(id, "sheets", "0");
+	}
+	else
+	{
+		ushortList *p;
+		string buff = to_string(sheets->id);
+		for (p = sheets->next; p != NULL; p = p->next)
+		{
+			buff += "," + to_string(p->id);
+		}
+		writeFile(id, "sheets", buff);
+	}
 }
-bool Entry::load()
+bool Entry::load(const short &entries)
 {
-	return load(id);
+	return load(entries, id);
 }
-bool Entry::load(const ushort &Id, const bool loadGeneration)
+bool Entry::load(const short &entries, const ushort &Id)
 {
-	ifstream file("files\\" + to_string(Id) + "\\name.dat");
-	if (!file.is_open())
+	if (entries < id || id <= 0)
 	{
 		return false;
 	}
 	id = Id;
-	{
-		file >> name;
-		string b;
-		while (file >> b)
-		{
-			name += " " + b;
-		}
-	}
-	file.close();
-	file.open("files\\" + to_string(Id) + "\\gender.dat");
-	file >> gender;
-	file.close();
-	ushort buff;
-	file.open("files\\" + to_string(Id) + "\\birthStatus.dat");
-	file >> buff;
+	name = readFile(Id, "name");
+	gender = readFile(Id, "gender") != "0";
+	ushort buff = stoi(readFile(Id, "birthStatus"));
 	switch (buff)
 	{
 	case 0:
@@ -867,9 +862,7 @@ bool Entry::load(const ushort &Id, const bool loadGeneration)
 		break;
 	}
 	}
-	file.close();
-	file.open("files\\" + to_string(Id) + "\\deathStatus.dat");
-	file >> buff;
+	buff = stoi(readFile(Id, "deathStatus"));
 	switch (buff)
 	{
 	case 0:
@@ -898,59 +891,67 @@ bool Entry::load(const ushort &Id, const bool loadGeneration)
 		break;
 	}
 	}
-	file.close();
 	if (birthStatus != Un)
 	{
-		file.open("files\\" + to_string(Id) + "\\birth.dat");
-		file >> birth;
-		file.close();
+		birth = stoi(readFile(Id, "birth"));
 	}
 	if (deathStatus != Un)
 	{
-		file.open("files\\" + to_string(Id) + "\\death.dat");
-		file >> death;
-		file.close();
+		death = stoi(readFile(Id, "death"));
 	}
-	file.open("files\\" + to_string(Id) + "\\father.dat");
-	file >> father;
-	file.close();
-	file.open("files\\" + to_string(Id) + "\\mather.dat");
-	file >> mather;
-	file.close();
-	file.open("files\\" + to_string(Id) + "\\children.dat");
+	father = stoi(readFile(Id, "father"));
+	mather = stoi(readFile(Id, "mather"));
 	delete children;
-	children = NULL;
-	while (file >> buff)
+	string sbuff = readFile(Id, "children");
+	children = new ushortList;
+	ushortList *p = children;
+	children->id = 0;
+	for (int i = 0; i < sbuff.length(); i++)
 	{
-		addChild(buff);
-	}
-	file.close();
-	file.open("files\\" + to_string(Id) + "\\sheets.dat");
-	delete sheets;
-	sheets = new ushortList;
-	if (file >> buff)
-	{
-		sheets->id = buff;
-		ushortList *pointer = sheets;
-		while (file >> buff)
+		static short n = 0;
+		if (sbuff[i] == ',')
 		{
-			pointer->next = new ushortList;
-			pointer = pointer->next;
-			pointer->id = buff;
+			p->next = new ushortList;
+			p = p->next;
+			n = 0;
+			p->id = 0;
 		}
-		pointer->next = NULL;
+		else
+		{
+			p->id *= 10;
+			string stmp;
+			stmp.resize(1);
+			stmp[0] = sbuff[i];
+			p->id += stoi(stmp);
+		}
 	}
-	else
+	p->next = NULL;
+	delete sheets;
+	sbuff = readFile(Id, "children");
+	sheets = new ushortList;
+	p = sheets;
+	sheets->id = 0;
+	for (int i = 0; i < sbuff.length(); i++)
 	{
-		sheets = NULL;
+		static short n = 0;
+		if (sbuff[i] == ',')
+		{
+			p->next = new ushortList;
+			p = p->next;
+			n = 0;
+			p->id = 0;
+		}
+		else
+		{
+			p->id *= 10;
+			string stmp;
+			stmp.resize(1);
+			stmp[0] = sbuff[i];
+			p->id += stoi(stmp);
+		}
 	}
-	file.close();
-	if (loadGeneration)
-	{
-		file.open("files\\" + to_string(Id) + "\\generation.dat");
-		file >> generation;
-		file.close();
-	}
+	p->next = NULL;
+	generation = stoi(readFile(Id, "generation"));
 	return true;
 }
 void Entry::addChild(const ushort &Id)
@@ -995,7 +996,7 @@ void Entry::displayListHeader()
 	cout << endl;
 	resetColor();
 }
-bool Entry::search(const bool &exact, const bool &display, const string str, bool make_line)
+bool Entry::search(const short &entries, const bool &exact, const bool &display, const string str, bool make_line)
 {
 	if (display)
 	{
@@ -1012,17 +1013,12 @@ bool Entry::search(const bool &exact, const bool &display, const string str, boo
 	}
 	string buff;
 	bool ret = false;
-	ifstream file("files\\1\\name.dat");
-	for (short i = 2; file.is_open(); i++)
+	Entry entry(1);
+	for (short i = 1; i <= entries; i++)
 	{
+		entry.load(entries, i);
 		bool match = false;
-		file >> buff;
-		string tmp;
-		while (file >> tmp)
-		{
-			buff += " " + tmp;
-		}
-		file.close();
+		buff = entry.getName();
 		match = exact ? (buff == str) : (buff.find(str) != buff.npos);
 		if (match)
 		{
@@ -1030,11 +1026,8 @@ bool Entry::search(const bool &exact, const bool &display, const string str, boo
 		}
 		if (match && display)
 		{
-			Entry entry(i - 1);
-			entry.load();
 			entry.displayInList();
 		}
-		file.open("files\\" + to_string(i) + "\\name.dat");
 	}
 	if (display && !ret)
 	{
@@ -1050,8 +1043,8 @@ bool Entry::search(const bool &exact, const bool &display, const string str, boo
 		while (ID != 0)
 		{
 			Entry entry(ID);
-			entry.load();
-			ID = entry.display();
+			entry.load(entries);
+			ID = entry.display(entries);
 		}
 	}
 	return ret;
@@ -1064,7 +1057,11 @@ ushortList* Entry::getSheets()
 {
 	return sheets;
 }
-void Entry::edit()
+string Entry::getName()
+{
+	return name;
+}
+void Entry::edit(const short &entries)
 {
 	line("Редактирование");
 	bool in;
@@ -1073,7 +1070,7 @@ void Entry::edit()
 	cin >> in;
 	if (in)
 	{
-		setName();
+		setName(entries);
 	}
 	cout << "Введите 1, чтобы изменить; 0, чтобы не изменять." << endl << endl <<
 		"Пол: " << (gender ? "Мужской" : "Женский") << endl << "\t";
@@ -1102,12 +1099,12 @@ void Entry::edit()
 	}
 	cout << "Введите 1, чтобы изменить; 0, чтобы не изменять." << endl << endl <<
 		"Родители:" << endl;
-	displayParents();
+	displayParents(entries);
 	cout << endl << "\t";
 	cin >> in;
 	if (in)
 	{
-		setParents();
+		setParents(entries);
 	}
 	cout << "Введите 1, чтобы изменить; 0, чтобы не изменять." << endl << endl <<
 		"Листы: ";

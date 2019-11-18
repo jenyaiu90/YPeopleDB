@@ -7,15 +7,10 @@
 //////////////////////////////////////*/
 #pragma once
 #include <string>
+#include "File.h"
 using namespace std;
 #define ushort unsigned short
 #define uint unsigned int
-struct ushortList
-{
-public:
-	ushort id;
-	ushortList *next;
-};
 enum DateStatus { Norm, Un, Around, Before, After };
 
 class Entry
@@ -33,35 +28,33 @@ private:
 	ushortList *children;
 	ushortList *sheets;
 	short generation;
-	void setName();
+	void setName(const short&);
 	void setGender();
 	void setBirth();
 	void setDeath();
-	void setParents();
+	void setParents(const short&);
 	void setSheets();
 public: void setGeneration();
 private: void displayYear(const bool&);
-	void displayParents();
+	void displayParents(const short&);
 	void displaySheets();
-	void sg(short);
 public:
 	Entry(const ushort&);
 	~Entry();
-	void set();
+	void set(const short&);
 	bool getGender();
-	ushort display(const bool displayGeneration=true);
-	static short displayList(const short page=0);
-	static void displaySheetList(const ushort&);
+	ushort display(const short&);
+	static short displayList(const short&, const short page=0);
+	static void displaySheetList(const short&, const ushort&);
 	void displayInList();
 	void save();
-	bool load();
-	bool load(const ushort&, const bool loadGeneration=true);
+	bool load(const short&);
+	bool load(const short&, const ushort&);
 	void addChild(const ushort&);
 	static void displayListHeader();
-	static bool search(const bool&, const bool&, const string, const bool make_line=true);
+	static bool search(const short&, const bool&, const bool&, const string, const bool make_line=true);
 	ushort getParent(const bool&);
 	ushortList* getSheets();
-	void edit();
+	string getName();
+	void edit(const short&);
 };
-
-//void line(const string text, const int num);

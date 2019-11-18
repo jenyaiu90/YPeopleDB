@@ -11,31 +11,32 @@
 #include <fstream>
 #include <string>
 #include <conio.h>
+#include <direct.h>
 using namespace std;
 ushort entries()
 {
-	ushort ret;
-	ret = 1;
-	while (true)
+	ifstream file("files\\dbn.ypdb");
+	if (!file.is_open())
 	{
-		static ifstream file;
-		static ifstream version_check;
-		file.open("files\\" + to_string(ret) + "\\name.dat");
-		if (!file.is_open())
-		{
-			return ret - 1;
-		}
+		_mkdir("files\\");
+		ofstream file("files\\dbn.ypdb");
+		file << "0" << endl;
 		file.close();
-		ret++;
+		file.open("files\\db0.ypdb");
+		file.close();
+		return 0;
 	}
+	string buff;
+	file >> buff;
+	file.close();
+	return stoi(buff);
 }
 int main()
 {
 	//setlocale(LC_ALL, "Russian");
 	system("chcp 1251");
 	system("cls");
-	//display_logo();
-	entries();
+	display_logo();
 	while (true)
 	{
 		ushort in;
@@ -56,11 +57,17 @@ int main()
 			return 0;
 		case 1:
 		{
+			if (entries() == 0)
+			{
+				system("cls");
+				cout << "Записи отсутствуют." << endl << endl;
+				break;
+			}
 			short page = 0;
 			while (page > -1)
 			{
 				system("cls");
-				page = Entry::displayList(page);
+				page = Entry::displayList(entries(), page);
 			}
 			system("cls");
 			break;
@@ -69,13 +76,19 @@ int main()
 		{
 			system("cls");
 			Entry entry(entries() + 1);
-			entry.set();
+			entry.set(entries());
 			_getch();
 			system("cls");
 			break;
 		}
 		case 3:
 		{
+			if (entries() == 0)
+			{
+				system("cls");
+				cout << "Записи отсутствуют." << endl << endl;
+				break;
+			}
 			cout << "Введите 0 для поиска.\nID: ";
 			cin >> in;
 			system("cls");
@@ -87,21 +100,21 @@ int main()
 				getline(cin, buff);
 				buff = b + buff;
 				system("cls");
-				Entry::search(false, true, buff);
+				Entry::search(entries(), false, true, buff);
 				cout << endl << "Просмотреть ID: ";
 				cin >> in;
 			}
 			while (in != 0)
 			{
 				Entry entry(in);
-				if (!entry.load())
+				if (!entry.load(entries()))
 				{
 					system("cls");
 					cout << "Такой записи не существует." << endl << endl;
 				}
 				else
 				{
-					in = entry.display();
+					in = entry.display(entries());
 					system("cls");
 				}
 			}
@@ -110,6 +123,12 @@ int main()
 		}
 		case 4:
 		{
+			if (entries() == 0)
+			{
+				system("cls");
+				cout << "Записи отсутствуют." << endl << endl;
+				break;
+			}
 			cout << "Введите 0 для поиска.\nID: ";
 			cin >> in;
 			system("cls");
@@ -121,19 +140,19 @@ int main()
 				getline(cin, buff);
 				buff = b + buff;
 				system("cls");
-				Entry::search(false, true, buff);
+				Entry::search(entries(), false, true, buff);
 				cout << endl << "Редактировать ID: ";
 				cin >> in;
 			}
 			Entry entry(in);
-			if (!entry.load())
+			if (!entry.load(entries()))
 			{
 				system("cls");
 				cout << "Такой записи не существует." << endl << endl;
 			}
 			else
 			{
-				entry.edit();
+				entry.edit(entries());
 				_getch();
 				system("cls");
 			}
@@ -142,22 +161,34 @@ int main()
 		case 5:
 		case 6:
 		{
+			if (entries() == 0)
+			{
+				system("cls");
+				cout << "Записи отсутствуют." << endl << endl;
+				break;
+			}
 			string buff, b;
 			cout << "Запрос: ";
 			cin >> b;
 			getline(cin, buff);
 			buff = b + buff;
 			system("cls");
-			Entry::search(in == 6, true, buff);
+			Entry::search(entries(), in == 6, true, buff);
 			system("cls");
 			break;
 		}
 		case 7:
 		{
+			if (entries() == 0)
+			{
+				system("cls");
+				cout << "Записи отсутствуют." << endl << endl;
+				break;
+			}
 			cout << "Лист №";
 			cin >> in;
 			system("cls");
-			Entry::displaySheetList(in);
+			Entry::displaySheetList(entries(), in);
 			system("cls");
 			break;
 		}
