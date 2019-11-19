@@ -45,7 +45,7 @@ public:
 	bool getGender();
 	ushort display(const short&);
 	static short displayList(const short&, const short page=0);
-	static void displaySheetList(const short&, const ushort&);
+	static short displaySheetList(const short&, const ushort&, const short page=0);
 	void displayInList();
 	void save();
 	bool load(const short&);

@@ -40,7 +40,7 @@ int main()
 	while (true)
 	{
 		ushort in;
-		cout << "v.2.0" << endl << endl <<
+		cout << "v.2.0.1" << endl << endl <<
 			"1. Вывести список." << endl <<
 			"2. Добавить запись." << endl <<
 			"3. Просмотреть запись" << endl <<
@@ -188,7 +188,7 @@ int main()
 			cout << "Лист №";
 			cin >> in;
 			system("cls");
-			Entry::displaySheetList(entries(), in);
+			for (short p = Entry::displaySheetList(entries(), in); p != -1; p = (system("cls"), Entry::displaySheetList(entries(), in, p)));
 			system("cls");
 			break;
 		}

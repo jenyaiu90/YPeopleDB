@@ -90,21 +90,25 @@ void Entry::set(const short &entries)
 	setDeath();
 	setParents(entries);
 	setSheets();
-	if (father)
+	short gf = -30000, gm = -30000;
+	if (father != 0)
 	{
 		Entry tmp(father);
 		tmp.load(entries);
-		generation = tmp.generation + 1;
+		gf = tmp.generation;
+	}
+	if (mather != 0)
+	{
+		Entry tmp(mather);
+		tmp.load(entries);
+		gm = tmp.generation;
+	}
+	if (gf != -30000 || gm != -30000)
+	{
+		generation = max(gf, gm) + 1;
 	}
 	else
 	{
-		if (mather)
-		{
-			Entry tmp(mather);
-			tmp.load(entries);
-			generation = tmp.generation + 1;
-		}
-		else
 		setGeneration();
 	}
 	save();
@@ -114,6 +118,7 @@ void Entry::set(const short &entries)
 	ifile.close();
 	ofstream ofile("files\\dbn.ypdb");
 	ofile << ++count;
+	ofile.close();
 	cout << "Информация сохранена.";
 }
 void Entry::setName(const short &entries)
@@ -127,13 +132,6 @@ void Entry::setName(const short &entries)
 		cin >> tmp;
 		getline(cin, name);
 		name = tmp + name;
-		if (name.length() > 53)
-		{
-			setColor(Red, LightRed);
-			cout << "Имя не должно быть длиннее 53 символов." << endl;
-			resetColor();
-			success = false;
-		}
 		if (search(entries, true, false, name, false))
 		{
 			setColor(Yellow, LightRed);
@@ -180,7 +178,7 @@ void Entry::setGender()
 		default:
 		{
 			setColor(Red, LightRed);
-			cout << "Введите M или F.\n";
+			cout << "Введите М или Ж.\n";
 			resetColor();
 			success = false;
 		}
@@ -325,8 +323,7 @@ void Entry::setParents(const short &entries)
 {
 	bool success;
 	cout << endl << "Если родитель неизвестен, введите 0." << endl <<
-		"Чтобы вывести список всех людей, введите -1." << endl <<
-		"Чтобы начать поиск людей, введите -2." << endl << endl;
+		"Чтобы начать поиск людей, введите -1." << endl << endl;
 	int in;
 	bool is_mather = false;
 	for (short i = 0; i < 2; i++, is_mather = true)
@@ -346,13 +343,6 @@ void Entry::setParents(const short &entries)
 				break;
 			}
 			case -1:
-			{
-				success = false;
-				cout << endl;
-				displayList(entries);
-				cout << endl;
-				break;
-			}
 			case -2:
 			{
 				cout << "Запрос: ";
@@ -472,7 +462,7 @@ void Entry::displayParents(const short &entries)
 		setColor(Yellow, Blue);
 		cout << "?   ";
 		setColor(Red, LightGreen);
-		cout << "Отец неизвестен. . . . . . . . . . . . . . .";
+		cout << "Отец неизвестен . . . . . . . . . . . . . . . . . . . .";
 		setColor(LightBlue, White);
 		cout << "М";
 		setColor(Green, LightGreen);
@@ -498,7 +488,7 @@ void Entry::displayParents(const short &entries)
 		setColor(Yellow, Blue);
 		cout << "?   ";
 		setColor(Red, LightGreen);
-		cout << "Мать неизвестна. . . . . . . . . . . . . . .";
+		cout << "Мать неизвестна . . . . . . . . . . . . . . . . . . . .";
 		setColor(LightMagenta, White);
 		cout << "Ж";
 		setColor(Green, LightGreen);
@@ -606,7 +596,7 @@ ushort Entry::display(const short &entries)
 }
 short Entry::displayList(const short &entries, const short page)
 {
-	line("Список записей. Страница ", page + 1);
+	line("Список записей. Страница " + to_string(page + 1));
 	displayListHeader();
 	Entry entry(1);
 	short i;
@@ -635,12 +625,13 @@ short Entry::displayList(const short &entries, const short page)
 	}
 	return 0;
 }
-void Entry::displaySheetList(const short &entries, const ushort &sheet)
+short Entry::displaySheetList(const short &entries, const ushort &sheet, const short page)
 {
-	line("Список записей в листе №" + sheet);
+	line("Список записей в листе №" + to_string(sheet) + ". Страница №" + to_string(page + 1));
 	displayListHeader();
 	Entry entry(1);
-	for (short i = 1; i <= entries; i++)
+	short e = 0, i;
+	for (i = 1; i <= entries && e <= 150 * (page + 1); i++)
 	{
 		entry.load(entries, i);
 		bool match = false;
@@ -648,24 +639,43 @@ void Entry::displaySheetList(const short &entries, const ushort &sheet)
 		{
 			if (sheet == pointer->id)
 			{
+				e++;
 				match = true;
 				break;
 			}
 		}
-		if (match)
+		if (match && e > page * 150)
 		{
 			entry.displayInList();
 		}
 	}
-	cout << endl << "Введите 0 для выхода" << endl << "Перейти к ID: ";
-	ushort ID;
+	cout << endl << "0 — выход." << endl;
+	if (page != 0)
+	{
+		cout << "-2 — предыдущая страница." << endl;
+	}
+	if (i <= entries)
+	{
+		cout << "-1 — следующая страница." << endl;
+	}
+	cout << "Перейти к ID: ";
+	short ID;
 	cin >> ID;
+	if (ID == -2)
+	{
+		return page - 1;
+	}
+	if (ID == -1)
+	{
+		return page + 1;
+	}
 	while (ID != 0)
 	{
 		Entry entry(ID);
 		entry.load(entries);
 		ID = entry.display(entries);
 	}
+	return -1;
 }
 void Entry::displayInList()
 {
@@ -680,14 +690,25 @@ void Entry::displayInList()
 		cout << " ";
 	}
 	setColor(Red, LightGreen);
-	cout << name;
-	if (name.length() % 2)
+	if (name.length() > 55)
 	{
-		cout << ".";
+		for (int j = 0; j < 54; j++)
+		{
+			cout << name[j];
+		}
+		cout << "…";
 	}
-	for (i = 0; i < (44 - name.length()) / 2; i++)
+	else
 	{
-		cout << " .";
+		cout << name;
+		if (name.length() % 2 == 0)
+		{
+			cout << ".";
+		}
+		for (i = 0; i < (55 - name.length()) / 2; i++)
+		{
+			cout << " .";
+		}
 	}
 	setColor(gender ? LightBlue : LightMagenta, White);
 	cout << (gender ? "М" : "Ж");
@@ -826,8 +847,9 @@ bool Entry::load(const short &entries)
 }
 bool Entry::load(const short &entries, const ushort &Id)
 {
-	if (entries < id || id <= 0)
+	if (entries < Id || Id <= 0)
 	{
+		name = "ОШИБКА! Записи с id " + to_string(Id) + " не существует!";
 		return false;
 	}
 	id = Id;
@@ -976,7 +998,7 @@ void Entry::displayListHeader()
 	setColor(Yellow, Blue);
 	cout << "№   ";
 	setColor(Red, LightGreen);
-	cout << "Имя                                         ";
+	cout << "Имя                                                    ";
 	setColor(LightBlue, White);
 	cout << " ";
 	setColor(Green, LightGreen);
@@ -990,7 +1012,7 @@ void Entry::displayListHeader()
 	setColor(LightGray, Blue);
 	cout << "Пок" << endl;
 	setColor(Red, LightRed);
-	for (short i = 0; i < 68; i++)
+	for (short i = 0; i < 79; i++)
 	{
 		cout << "—";
 	}
